@@ -68,7 +68,6 @@ void draw(u8g2_t *u8g2);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
 /* USER CODE END 0 */
 
 /**
@@ -147,10 +146,13 @@ int main(void)
       // HAL_UART_Transmit(&huart1, (uint8_t*)"\n", 1, 100);
     }
 
-    if(!(contrast & 0x80)) {
-    	u8g2_SetContrast(&u8g2, contrast & 0xFF);
+    const uint_fast8_t CONTRASTOFFSET = 0x01;
+    const uint_fast8_t CONTRASTMAX = 0x20;
+
+    if(!(contrast & CONTRASTMAX)) {
+    	u8g2_SetContrast(&u8g2, CONTRASTOFFSET + (contrast & (CONTRASTMAX - 1)));
     } else {
-    	u8g2_SetContrast(&u8g2, 127 - (contrast & 0x7F));
+    	u8g2_SetContrast(&u8g2, CONTRASTOFFSET + (CONTRASTMAX - 1) - (contrast & (CONTRASTMAX - 1)));
     }
     contrast++;
     HAL_Delay(100);
