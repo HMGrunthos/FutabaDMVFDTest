@@ -102,6 +102,8 @@ int main(void)
   MX_SPI1_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+  HAL_UART_Transmit(&huart1, (uint8_t*)"Startup...\n", 11, 100);
+
   HAL_GPIO_WritePin(VFD_RESET_GPIO_Port, VFD_RESET_Pin, GPIO_PIN_RESET);
   HAL_Delay(1);
   HAL_GPIO_WritePin(VFD_RESET_GPIO_Port, VFD_RESET_Pin, GPIO_PIN_SET);
