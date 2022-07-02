@@ -57,7 +57,7 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define VFD_FILEN_Pin GPIO_PIN_2
+#define VFD_FILEN_Pin GPIO_PIN_3
 #define VFD_FILEN_GPIO_Port GPIOA
 #define VFD_RESET_Pin GPIO_PIN_4
 #define VFD_RESET_GPIO_Port GPIOA
