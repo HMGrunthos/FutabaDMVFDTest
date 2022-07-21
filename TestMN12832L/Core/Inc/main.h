@@ -63,6 +63,7 @@ void Error_Handler(void);
 #define VFD_HV_GPIO_Port GPIOA
 #define VFD_SO1_Pin GPIO_PIN_3
 #define VFD_SO1_GPIO_Port GPIOA
+#define VFD_SO1_EXTI_IRQn EXTI3_IRQn
 #define VFD_BLK_Pin GPIO_PIN_4
 #define VFD_BLK_GPIO_Port GPIOA
 #define VFD_LAT_Pin GPIO_PIN_6

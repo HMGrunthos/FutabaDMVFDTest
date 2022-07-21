@@ -21,7 +21,12 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
 
+#include "ResetSource.h"
+#include "MN12832L.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,7 +55,8 @@ TIM_HandleTypeDef htim6;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-
+// uint_fast32_t wdEdgeCtr = 0;
+bool sysInitComplete = false;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -67,7 +73,6 @@ static void MX_TIM6_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
 /* USER CODE END 0 */
 
 /**
@@ -93,7 +98,7 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+  enum ResetCause rstCause = resetCauseGet();
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -104,22 +109,40 @@ int main(void)
   MX_IWDG_Init();
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_Transmit(&huart1, (uint8_t*)"Startup...\n", 11, 100);
+  sysInitComplete = true; // Let the interrupt handlers know that initialisation is complete
+  uint_fast32_t bootNumber = HAL_RTCEx_BKUPRead(&hrtc, 1);
+  HAL_RTCEx_BKUPWrite(&hrtc, 1, bootNumber + 1);
+  printf("Reset source :%s: Boot number :%i:\a\n", resetCauseGetName(rstCause), bootNumber);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
+  bool enableDisplay = false;
+  uint_fast8_t nGateCycles = 0;
+  while (1) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
     HAL_IWDG_Refresh(&hiwdg);
-    // htim6.Instance->CNT = 0;
-    // HAL_GPIO_TogglePin(VFD_BLK_GPIO_Port, VFD_BLK_Pin);
-    HAL_UART_Transmit(&huart1, (uint8_t*)"Loop...\n", 8, 100);
-    const uint_least8_t bitToggle = 0xAA;
-    HAL_SPI_Transmit(&hspi1, &bitToggle, 1, HAL_MAX_DELAY);
+
+    bool gCycle = UpdateMN12832L(enableDisplay);
+
+    if(gCycle) {
+    	nGateCycles++;
+    	if(nGateCycles > 100) { // Enable HV
+            HAL_GPIO_WritePin(VFD_HV_GPIO_Port, VFD_HV_Pin, GPIO_PIN_SET);
+    		enableDisplay = true;
+    	}
+    	if(nGateCycles > 200) { // Enable Filament
+            HAL_GPIO_WritePin(VFD_EF_GPIO_Port, VFD_EF_Pin, GPIO_PIN_SET);
+    		enableDisplay = true;
+    	}
+    	if(nGateCycles == 0xFF) {
+    		// Start disabling the blanking signal
+    		// puts("Enabling display\n");
+    		enableDisplay = true;
+    	}
+    }
   }
   /* USER CODE END 3 */
 }
@@ -189,7 +212,7 @@ static void MX_IWDG_Init(void)
 
   /* USER CODE END IWDG_Init 1 */
   hiwdg.Instance = IWDG;
-  hiwdg.Init.Prescaler = IWDG_PRESCALER_4;
+  hiwdg.Init.Prescaler = IWDG_PRESCALER_4; // IWDG_PRESCALER_256; //IWDG_PRESCALER_4;
   hiwdg.Init.Reload = 512;
   if (HAL_IWDG_Init(&hiwdg) != HAL_OK)
   {
@@ -372,7 +395,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin : VFD_SO1_Pin */
   GPIO_InitStruct.Pin = VFD_SO1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(VFD_SO1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : VFD_BLK_Pin VFD_LAT_Pin */
@@ -381,6 +404,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI3_IRQn, 14, 0);
+  HAL_NVIC_EnableIRQ(EXTI3_IRQn);
 
 }
 
